@@ -37,7 +37,7 @@ const coinagent = new Agent({
     apiKey: process.env.OPENSERV_API_KEY,
 });
 
-const formatToolName = (name) => name.replace(/\./g, '_');
+const formatToolName = (name: string) => name.replace(/\./g, '_');
 
 async function main() {
     const dummyWalletClient = createWalletClient({
