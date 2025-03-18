@@ -1,5 +1,4 @@
 import 'dotenv/config';
-
 import { getTools, type ToolBase } from '@goat-sdk/core';
 import { coingecko } from '@goat-sdk/plugin-coingecko';
 import { Agent, type Capability } from '@openserv-labs/sdk';
@@ -15,8 +14,7 @@ import { viem } from '@goat-sdk/wallet-viem';
     }
 });
 
-const systemPrompt = `
-You are a helpful AI assistant that retrieves cryptocurrency information from CoinGecko.
+const systemPrompt = `You are a helpful AI assistant that retrieves cryptocurrency information from CoinGecko.
 
 You have the following capabilities:
 
@@ -27,14 +25,13 @@ You have the following capabilities:
 * **coingecko_get_historical_data:** Get historical price data for a specific date.
 * **coingecko_get_trending_coin_categories:** Get trending coins within specific categories.
 * **coingecko_coin_categories:** Get a list of all coin categories.
-* **coingecko_get_ohlc_data:** Get OHLC (Open-High-Low-Close) market data.
-`;
+* **coingecko_get_ohlc_data:** Get OHLC (Open-High-Low-Close) market data.`;
 
 const toolNameMap = new Map();
 
 const coinagent = new Agent({
     systemPrompt,
-    apiKey: process.env.OPENSERV_API_KEY,
+    apiKey: process.env.OPENSERV_API_KEY as string, // Fix for error 1: Add type assertion
 });
 
 const formatToolName = (name: string) => name.replace(/\./g, '_');
@@ -42,7 +39,7 @@ const formatToolName = (name: string) => name.replace(/\./g, '_');
 async function main() {
     const dummyWalletClient = createWalletClient({
         chain: mainnet,
-        transport: http(process.env.RPC_PROVIDER_URL),
+        transport: http(process.env.RPC_PROVIDER_URL as string), // Adding type assertion
     }) as any;
 
     const wallet = viem(dummyWalletClient);
@@ -51,7 +48,7 @@ async function main() {
         wallet,
         plugins: [
             coingecko({
-                apiKey: process.env.COINGECKO_API_KEY,
+                apiKey: process.env.COINGECKO_API_KEY as string, // Adding type assertion
             }),
         ],
     });
@@ -59,9 +56,10 @@ async function main() {
     console.log("=== Available Tools ===");
     allTools.forEach((tool, index) => {
         console.log(`[${index}] Tool Name: ${tool.name}`);
+        // Fix for error 2: Create a modified copy instead of modifying the original
         if (tool.description && tool.description.length > 1000) {
             console.log("⚠️ LONG DESCRIPTION WARNING ⚠️");
-            tool.description = tool.description.substring(0, 1000) + "... (truncated)";
+            // Don't modify read-only property directly
         }
     });
 
@@ -75,9 +73,15 @@ async function main() {
 
     const toCapability = (tool: ToolBase) => {
         const formattedName = formatToolName(tool.name);
+        // Create a description variable that can be truncated if needed
+        let toolDescription = tool.description;
+        if (toolDescription && toolDescription.length > 1000) {
+            toolDescription = toolDescription.substring(0, 1000) + "... (truncated)";
+        }
+        
         return {
             name: formattedName,
-            description: tool.description,
+            description: toolDescription,
             schema: tool.parameters,
             async run({ args }) {
                 try {
